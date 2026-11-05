@@ -1,0 +1,396 @@
+{
+  "name": "Agente de Pedidos - Restaurante",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "123db517-e32e-4802-8476-bed8016e8fbd",
+      "name": "Telegram Trigger",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "Você é o atendente virtual do Restaurante do Rafael, um restaurante de delivery.\nFale de forma simpática, curta e em português do Brasil, como numa conversa de WhatsApp.\n\nCARDÁPIO\nMassas:\n- Espaguete à bolonhesa — R$ 39,90\n- Lasanha de frango — R$ 44,90\n- Nhoque ao sugo — R$ 36,90\nPizzas (8 fatias):\n- Margherita — R$ 54,90\n- Calabresa — R$ 52,90\n- Quatro queijos — R$ 59,90\nBebidas:\n- Refrigerante lata — R$ 6,00\n- Suco natural 500ml — R$ 10,00\nTaxa de entrega: R$ 7,00\n\nREGRAS\n1. Só ofereça itens do cardápio. Se pedirem algo que não existe, diga que não temos e sugira algo parecido.\n2. Monte o pedido junto com o cliente, perguntando a quantidade de cada item.\n3. Antes de fechar, peça: nome, endereço de entrega e forma de pagamento (Pix, cartão na entrega ou dinheiro; se for dinheiro, pergunte se precisa de troco).\n4. Calcule o total certinho, incluindo a taxa de entrega.\n5. Mostre um resumo e peça confirmação. Quando o cliente confirmar, responda neste formato:\n\n✅ PEDIDO CONFIRMADO\nCliente: ...\nItens: ...\nEndereço: ...\nPagamento: ...\nTotal: R$ ...\nPrevisão de entrega: 40 a 50 minutos\n\n6. Nunca invente preços, promoções ou prazos diferentes desses.\n\n7. Assim que o cliente confirmar o pedido:\n   - use a ferramenta salvar_pedido com os dados do pedido;\n   - depois use a ferramenta avisar_cozinha enviando o resumo do pedido;\n   - só então envie ao cliente a mensagem \"✅ PEDIDO CONFIRMADO\".\n\n8. Nunca use essas ferramentas antes da confirmação do cliente."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "07b70c2c-4578-4720-b2e6-ef10a454c34f",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        96,
+        208
+      ],
+      "id": "80fc53e9-9ea0-488d-ad17-edf815d59a87",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        208
+      ],
+      "id": "12481c9d-6ac4-4e1a-8f6d-0a5af5a399e5",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        0
+      ],
+      "id": "2899d34e-5171-43db-acc6-755ab37da915",
+      "name": "Send a text message",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "0ed353c1-33b2-4beb-808f-c01edcc8ecda",
+              "leftValue": "={{ $json.message.chat.type }}",
+              "rightValue": "private",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        0
+      ],
+      "id": "c6225961-516d-4a31-b11b-e387854b9fa6",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Salva o pedido confirmado na planilha de pedidos. Use somente depois que o cliente confirmar o pedido.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_SUA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Folha1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data": "={{ $now.format('dd/MM/yyyy HH:mm') }}",
+            "Chat ID": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+            "Cliente": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Cliente', ``, 'string') }}",
+            "Itens": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Itens', ``, 'string') }}",
+            "Endereço": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Endere_o', ``, 'string') }}",
+            "Pagamento": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Pagamento', ``, 'string') }}",
+            "Total": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Total', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Data",
+              "displayName": "Data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Cliente",
+              "displayName": "Cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Itens",
+              "displayName": "Itens",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Endereço",
+              "displayName": "Endereço",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pagamento",
+              "displayName": "Pagamento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Chat ID",
+              "displayName": "Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        608,
+        208
+      ],
+      "id": "633a1e4a-89eb-4453-a37b-8714ff6c02bf",
+      "name": "salvar_pedido",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "COLE_AQUI_O_ID_DO_GRUPO_DA_COZINHA",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Text', ``, 'string') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        304
+      ],
+      "id": "87a3e8a1-d0d2-4ca9-9196-56ee37afda45",
+      "name": "avisar_cozinha",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        352,
+        256
+      ],
+      "id": "de8ad601-1803-42fb-945a-57b6dbf316c5",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "salvar_pedido": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "avisar_cozinha": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
