@@ -84,4 +84,4 @@ O prompt completo do agente está em [`prompts/system-prompt.md`](prompts/system
 
 ---
 
-Feito por **Rafael da Silveira Gonçales** · [LinkedIn](https://www.linkedin.com/in/rafael-da-silveira-gonçales-971ab81b3) · [GitHub](https://github.com/Rafael8353)
+Feito por **Rafael da Silveira Gonçales** · [LinkedIn](https://www.linkedin.com/in/rafaelgoncales) · [GitHub](https://github.com/Rafael8353)
